@@ -4,7 +4,7 @@ from tkinter import messagebox
 
 # Create main window
 root = tk.Tk()
-root.title("Cafe Rom Ordering System")
+root.title("Beanorama Cafe Ordering System")
 root.geometry("1200x700")
 root.configure(bg="#E6E2D7")  # Milk color
 
@@ -18,7 +18,7 @@ top_frame.pack(fill="x")
 
 title_label = tk.Label(
     top_frame,
-    text="Cafe Rom\nOrdering System",
+    text="Beanorama\nCafe Ordering System",
     font=("Georgia", 24, "bold"),
     bg="#E6E2D7",
     fg="#3F1D0E"  # Coffee color
@@ -169,30 +169,35 @@ def calculate_total(event=None):
         change = cash - total
 
         change_entry.delete(0, tk.END)
-        change_entry.insert(0, str(change))
 
-    except:
-        pass
+        if change < 0:
+            change_entry.insert(0, "Insufficient")
+        else:
+            change_entry.insert(0, str(change))
+
+    except ValueError:
+        return
 
 # ADD ORDER FUNCTION
 def add_order():
     try:
         customer = customer_entry.get()
-
-        if customer == "":
-            messagebox.showwarning("Input Error", "Customer name is required!")
-            return
-
         category = category_combo.get()
         item = item_combo.get()
         size = size_combo.get()
+
+        # Validation 
+        if not all([customer, category, item, size]):
+            messagebox.showwarning("Input Error", "Please complete all fields!")
+            return
+
         quantity = int(quantity_entry.get())
         price = float(price_entry.get())
 
         total = price * quantity
         cash = float(cash_entry.get())
 
-        # ADD THIS CHECK
+        # Cash Validation 
         if cash < total:
             messagebox.showerror("Error", "Insufficient cash!")
             return
@@ -201,12 +206,12 @@ def add_order():
         orders.append(order)
 
         tree.insert("", "end", values=order)
+        clear_fields()
 
         print("Order added:", order)
 
-    except:
-        print("Error adding order")
-
+    except ValueError:
+        messagebox.showerror("Error", "Invalid input! Please enter correct values.")
 
 # DELETE FUNCTION [ CRUD ]
 def delete_order():
@@ -242,7 +247,7 @@ def load_selected(event):
         price_entry.delete(0, tk.END)
         price_entry.insert(0, float(values[5]) / int(values[4]))
 
-# UPDATE FUNCTION [ CRUD ]
+# UPDATE ORDER [ CRUD ]
 def update_order():
     selected = tree.selection()
 
@@ -250,10 +255,17 @@ def update_order():
         messagebox.showwarning("Warning", "Select an order to update")
         return
 
+    # GET VALUES FIRST
     customer = customer_entry.get()
     category = category_combo.get()
     item = item_combo.get()
     size = size_combo.get()
+
+    # VALIDATION AFTER getting values
+    if not all([customer, category, item, size]):
+        messagebox.showwarning("Input Error", "Please complete all fields!")
+        return
+
     quantity = quantity_entry.get()
     total = float(price_entry.get()) * int(quantity)
 
@@ -262,6 +274,17 @@ def update_order():
     ))
 
     messagebox.showinfo("Success", "Order updated successfully!")
+    
+def clear_fields():
+    customer_entry.delete(0, tk.END)
+    category_combo.set("")
+    item_combo.set("")
+    size_combo.set("")
+    price_entry.delete(0, tk.END)
+    quantity_entry.delete(0, tk.END)
+    quantity_entry.insert(0, "1")
+    cash_entry.delete(0, tk.END)
+    change_entry.delete(0, tk.END)
 
 # BUTTONS
 add_button = tk.Button(
