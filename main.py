@@ -1,6 +1,10 @@
 import tkinter as tk
+import pickle
 from tkinter import ttk
 from tkinter import messagebox
+from urllib.request import urlopen
+from PIL import Image, ImageTk
+import json
 
 # Create main window
 root = tk.Tk()
@@ -10,27 +14,77 @@ root.configure(bg="#E6E2D7")  # Milk color
 
 
 
-# ========== FRAMES ==========
 
-# Top Frame (Title)
-top_frame = tk.Frame(root, bg="#E6E2D7", height=80)
+
+
+
+# ================================================================= FRAMES =================================================================
+
+# Top Frame 
+top_frame = tk.Frame(root, bg="#D8C3A5")
 top_frame.pack(fill="x")
 
+separator = ttk.Separator(root, orient="horizontal")
+separator.pack(fill="x")
+
+# Load and resize logo
+logo_img = Image.open("logo.png")
+logo_img = logo_img.resize((90, 90))  # adjust size if needed
+logo_photo = ImageTk.PhotoImage(logo_img)
+
+# Container for logo + title
+title_container = tk.Frame(top_frame, bg="#D8C3A5")
+title_container.pack(pady=8)
+
+# Logo
+logo_label = tk.Label(title_container, image=logo_photo, bg="#D8C3A5")
+logo_label.image = logo_photo
+logo_label.pack(side="left", padx=(0, 10))
+
+# Title
 title_label = tk.Label(
-    top_frame,
+    title_container,
     text="Beanorama\nCafe Ordering System",
-    font=("Georgia", 24, "bold"),
-    bg="#E6E2D7",
-    fg="#3F1D0E"  # Coffee color
+    font=("Georgia", 22, "bold"),
+    bg="#D8C3A5",
+    fg="#3F1D0E"
 )
-title_label.pack(pady=10)
+title_label.pack(side="left")
+
+
+main_frame = tk.Frame(root, bg="#E6E2D7")
+main_frame.pack(fill="both", expand=True)
+main_frame.pack_propagate(True)
 
 # Left Frame (Order Details)
-left_frame = tk.Frame(root, bg="#E4CDB0", width=400)
-left_frame.pack(side="left", fill="y", padx=10, pady=10)
+left_frame = tk.Frame(main_frame, bg="#E6E2D7")
+left_frame.pack(side="left", fill="y", padx=15, pady=15)
+
+left_card = tk.Frame(
+    left_frame,
+    bg="#E4CDB0",
+    bd=0,
+    highlightthickness=1,
+    highlightbackground="#C2B280"
+)
+left_card.pack(fill="both", expand=True)
+
+# Right Frame (Summary + Table)
+right_frame = tk.Frame(main_frame, bg="#E6E2D7")
+right_frame.pack(side="left", expand=True, fill="both", padx=15, pady=15)
+
+right_card = tk.Frame(
+    right_frame,
+    bg="#F5F5F5",
+    bd=0,
+    highlightthickness=1,
+    highlightbackground="#C2B280"
+)
+right_card.pack(fill="both", expand=True)
+
 
 order_label = tk.Label(
-    left_frame,
+    left_card,
     text="Order Details",
     font=("Arial", 16, "bold"),
     bg="#E4CDB0",
@@ -38,89 +92,101 @@ order_label = tk.Label(
 )
 order_label.pack(pady=10)
 
-# Right Frame (Summary + Table)
-right_frame = tk.Frame(root, bg="#E4CDB0")
-right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
-
 columns = ("Customer", "Category", "Item", "Size", "Quantity", "Total")
 
-tree = ttk.Treeview(right_frame, columns=columns, show="headings")
+tree = ttk.Treeview(right_card, columns=columns, show="headings")
 
 for col in columns:
     tree.heading(col, text=col)
     tree.column(col, width=100)
 
-tree.pack(fill="both", expand=True)
+scrollbar = tk.Scrollbar(right_card, orient="vertical", command=tree.yview)
+tree.configure(yscrollcommand=scrollbar.set)
 
-# Bottom Frame (Buttons)
-bottom_frame = tk.Frame(root, bg="#E6E2D7", height=80)
-bottom_frame.pack(fill="x", side="bottom")
+tree.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=10)
+scrollbar.pack(side="right", fill="y")
 
-button_frame = tk.Frame(bottom_frame, bg="#E6E2D7")
-button_frame.pack(pady=10, anchor="center")
 
-button_frame.columnconfigure(0, weight=1)
-button_frame.columnconfigure(1, weight=1)
-button_frame.columnconfigure(2, weight=1)
+scrollbar.config(
+    bg="#E6E2D7",
+    troughcolor="#F5F5F5",
+    activebackground="#C2B280"
+)
+
+style = ttk.Style()
+style.configure("Treeview",
+    background="#F5F5F5",
+    foreground="black",
+    rowheight=25,
+    fieldbackground="#F5F5F5"
+)
+
+style.configure("Treeview.Heading",
+    font=("Arial", 10, "bold")
+)
+
+# ================================================================= DROPDOWNS =================================================================
 
 # Customer Name Field
-customer_label = tk.Label(left_frame, text="Customer Name:", bg="#E4CDB0")
-customer_label.pack(anchor="w", padx=10)
+customer_label = tk.Label(left_card, text="Customer Name:", bg="#E4CDB0")
+customer_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-customer_entry = tk.Entry(left_frame, width=30)
-customer_entry.pack(padx=10, pady=5)
+customer_entry = tk.Entry(left_card, width=30)
+customer_entry.pack(padx=15, pady=6)
 
 # Category Dropdown
-category_label = tk.Label(left_frame, text="Category:", bg="#E4CDB0")
-category_label.pack(anchor="w", padx=10)
+category_label = tk.Label(left_card, text="Category:", bg="#E4CDB0")
+category_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-category_combo = ttk.Combobox(left_frame, values=[
+category_combo = ttk.Combobox(left_card, values=[
     "Iced Coffee",
     "Milky Series",
     "Hot Coffee"
 ], state="readonly")
-category_combo.pack(padx=10, pady=5)
+category_combo.pack(padx=15, pady=6)
 
 # Item Dropdown
-item_label = tk.Label(left_frame, text="Item:", bg="#E4CDB0")
-item_label.pack(anchor="w", padx=10)
+item_label = tk.Label(left_card, text="Item:", bg="#E4CDB0")
+item_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-item_combo = ttk.Combobox(left_frame, state="readonly")
-item_combo.pack(padx=10, pady=5)
+item_combo = ttk.Combobox(left_card, state="readonly")
+item_combo.pack(padx=15, pady=6)
 
 # Size Dropdown
-size_label = tk.Label(left_frame, text="Size:", bg="#E4CDB0")
-size_label.pack(anchor="w", padx=10)
+size_label = tk.Label(left_card, text="Size:", bg="#E4CDB0")
+size_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-size_combo = ttk.Combobox(left_frame, values=["16oz", "22oz"], state="readonly")
-size_combo.pack(padx=10, pady=5)
+size_combo = ttk.Combobox(left_card, values=["16oz", "22oz"], state="readonly")
+size_combo.pack(padx=15, pady=6)
 
-price_label = tk.Label(left_frame, text="Unit Price:", bg="#E4CDB0")
-price_label.pack(anchor="w", padx=10)
+# Unit Price
+price_label = tk.Label(left_card, text="Unit Price:", bg="#E4CDB0")
+price_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-price_entry = tk.Entry(left_frame)
-price_entry.pack(padx=10, pady=5)
+price_entry = tk.Entry(left_card)
+price_entry.pack(padx=15, pady=6)
 
 # Quantity
-quantity_label = tk.Label(left_frame, text="Quantity:", bg="#E4CDB0")
-quantity_label.pack(anchor="w", padx=10)
+quantity_label = tk.Label(left_card, text="Quantity:", bg="#E4CDB0")
+quantity_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-quantity_entry = tk.Entry(left_frame, width=10)
+quantity_entry = tk.Entry(left_card, width=10)
 quantity_entry.insert(0, "1")
-quantity_entry.pack(padx=10, pady=5)
+quantity_entry.pack(padx=15, pady=6)
 
-# Cash + Change
-cash_label = tk.Label(left_frame, text="Cash Tendered:", bg="#E4CDB0")
-cash_label.pack(anchor="w", padx=10)
+# Cash Tendered
+cash_label = tk.Label(left_card, text="Cash Tendered:", bg="#E4CDB0")
+cash_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-cash_entry = tk.Entry(left_frame)
-cash_entry.pack(padx=10, pady=5)
+cash_entry = tk.Entry(left_card)
+cash_entry.pack(padx=15, pady=6)
 
-change_label = tk.Label(left_frame, text="Change:", bg="#E4CDB0")
-change_label.pack(anchor="w", padx=10)
+# Change
+change_label = tk.Label(left_card, text="Change:", bg="#E4CDB0")
+change_label.pack(anchor="w", padx=15, pady=(10, 0))
 
-change_entry = tk.Entry(left_frame)
-change_entry.pack(padx=10, pady=5)
+change_entry = tk.Entry(left_card)
+change_entry.pack(padx=15, pady=6)
 
 menu = {
     "Iced Coffee": {
@@ -140,6 +206,9 @@ menu = {
 }
 
 orders = []
+
+
+# ================================================================= DEF =================================================================
 
 def update_items(event):
     selected_category = category_combo.get()
@@ -209,9 +278,13 @@ def add_order():
         clear_fields()
 
         print("Order added:", order)
+        
+        save_orders()
 
     except ValueError:
         messagebox.showerror("Error", "Invalid input! Please enter correct values.")
+
+
 
 # DELETE FUNCTION [ CRUD ]
 def delete_order():
@@ -225,6 +298,7 @@ def delete_order():
     
     if confirm:
         tree.delete(selected_item)
+        save_orders()
     
 
 # LOAD FUNCTION [ CRUD ]
@@ -274,6 +348,7 @@ def update_order():
     ))
 
     messagebox.showinfo("Success", "Order updated successfully!")
+    save_orders()
     
 def clear_fields():
     customer_entry.delete(0, tk.END)
@@ -286,51 +361,133 @@ def clear_fields():
     cash_entry.delete(0, tk.END)
     change_entry.delete(0, tk.END)
 
-# BUTTONS
+def get_exchange_rate():
+    try:
+        url = 'https://www.floatrates.com/daily/usd.json'
+        response = urlopen(url)
+        data = json.loads(response.read())
+
+        php_rate = data['php']['rate']
+
+        messagebox.showinfo("Exchange Rate", f"USD to PHP: {php_rate}")
+
+    except:
+        messagebox.showerror("Error", "Failed to fetch data")
+# SAVE FUNCTION
+def save_orders():
+    with open("orders.dat", "wb") as file:
+        data = []
+
+        for item in tree.get_children():
+            data.append(tree.item(item, "values"))
+
+        pickle.dump(data, file)
+
+# LOAD FUNCTION
+def load_orders():
+    try:
+        with open("orders.dat", "rb") as file:
+            data = pickle.load(file)
+
+            for row in data:
+                tree.insert("", "end", values=row)
+
+    except FileNotFoundError:
+        pass
+    
+def on_enter(e):
+    e.widget['bg'] = "#8B5A2B"
+
+def on_leave(e):
+    e.widget['bg'] = "#A2663C"
+
+
+# ================================================================= BUTTONS =================================================================
+
+bottom_frame = tk.Frame(root, bg="#E6E2D7", height=70)
+bottom_frame.pack(side="bottom", fill="x")
+
+bottom_frame.pack_propagate(False)
+
+button_frame = tk.Frame(bottom_frame, bg="#E6E2D7")
+button_frame.pack(pady=5)
+
+for i in range(5):
+    button_frame.columnconfigure(i, weight=1)
+
+btn_style = {
+    "bg": "#A2663C",
+    "fg": "white",
+    "height": 2,
+    "font": ("Arial", 11, "bold"),  # slightly bigger
+    "cursor": "hand2",
+    "bd": 0,
+    "activebackground": "#8B5A2B"
+}
+
 add_button = tk.Button(
     button_frame,
     text="Add Order",
-    bg="#A2663C",
-    fg="white",
-    height=2,
-    font=("Arial", 10, "bold"),
-    cursor="hand2",
-    command=add_order
+    command=add_order,
+    **btn_style
 )
-add_button.grid(row=0, column=0, padx=20)
+add_button.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
 
 delete_button = tk.Button(
     button_frame,
     text="Delete Order",
-    bg="#A2663C",
-    fg="white",
-    height=2,
-    font=("Arial", 10, "bold"),
-    cursor="hand2",
-    command=delete_order
+    command=delete_order,
+    **btn_style
 )
-delete_button.grid(row=0, column=1, padx=20)
+delete_button.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
 
 update_button = tk.Button(
     button_frame,
     text="Update Order",
-    bg="#A2663C",
-    fg="white",
-    height=2,
-    font=("Arial", 10, "bold"),
-    cursor="hand2",
-    command=update_order
+    command=update_order,
+    **btn_style
 )
-update_button.grid(row=0, column=2, padx=20)
+update_button.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
 
-# Binds    
+api_button = tk.Button(
+    button_frame,
+    text="Get USD to PHP",
+    command=get_exchange_rate,
+    **btn_style
+)
+api_button.grid(row=0, column=3, padx=10, pady=5, sticky="ew")
+
+save_button = tk.Button(
+    button_frame,
+    text="Save",
+    command=save_orders,
+    **btn_style
+)
+save_button.grid(row=0, column=4, padx=10, pady=5, sticky="ew")
+
+
+
+
+# ================================================================= BINDS =================================================================
 category_combo.bind("<<ComboboxSelected>>", update_items)
 item_combo.bind("<<ComboboxSelected>>", update_price)
 size_combo.bind("<<ComboboxSelected>>", update_price)
 quantity_entry.bind("<KeyRelease>", calculate_total)
 cash_entry.bind("<KeyRelease>", calculate_total)
 tree.bind("<<TreeviewSelect>>", load_selected)
+
+add_button.bind("<Enter>", on_enter)
+add_button.bind("<Leave>", on_leave)
+
+delete_button.bind("<Enter>", on_enter)
+delete_button.bind("<Leave>", on_leave)
+
+update_button.bind("<Enter>", on_enter)
+update_button.bind("<Leave>", on_leave)
+
+api_button.bind("<Enter>", on_enter)
+api_button.bind("<Leave>", on_leave)
     
-    
+load_orders()
 # Runs the app
 root.mainloop()
