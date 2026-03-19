@@ -2,7 +2,7 @@
 # ============================================================
 # IMPORT LIBRARIES
 # ============================================================
-
+import mysql.connector
 import tkinter as tk                  # GUI library
 import pickle                         # For saving/loading data
 from tkinter import ttk               # For styled widgets
@@ -11,6 +11,17 @@ from urllib.request import urlopen    # For API requests
 from PIL import Image, ImageTk        # For handling images
 import json                           # For parsing API data
 
+try:
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="beanorama"
+    )
+    cursor = conn.cursor()
+    print("MYSQL CONNECTED")
+except mysql.connector.Error as err:
+    print("Error connecting to MySQL:", err)
 # ============================================================
 # CREATE MAIN WINDOW
 # ============================================================
@@ -247,7 +258,6 @@ def add_order():
         item = item_combo.get()
         size = size_combo.get()
 
-        # Validation 
         if not all([customer, category, item, size]):
             messagebox.showwarning("Input Error", "Please complete all fields!")
             return
@@ -258,23 +268,25 @@ def add_order():
         total = price * quantity
         cash = float(cash_entry.get())
 
-        # Cash Validation 
         if cash < total:
             messagebox.showerror("Error", "Insufficient cash!")
             return
 
         order = [customer, category, item, size, quantity, total]
-        orders.append(order)
 
         tree.insert("", "end", values=order)
+
+        # SAVE TO MYSQL
+        cursor.execute(
+            "INSERT INTO orders (customer, category, item, size, quantity, total) VALUES (%s, %s, %s, %s, %s, %s)",
+            (customer, category, item, size, quantity, total)
+        )
+        conn.commit()
+
         clear_fields()
 
-        print("Order added:", order)
-        
-        save_orders()
-
     except ValueError:
-        messagebox.showerror("Error", "Invalid input! Please enter correct values.")
+        messagebox.showerror("Error", "Invalid input!")
 
 # DELETE FUNCTION 
 def delete_order():
@@ -285,10 +297,17 @@ def delete_order():
         return
 
     confirm = messagebox.askyesno("Confirm", "Are you sure you want to delete this order?")
-    
+
     if confirm:
+        values = tree.item(selected_item, "values")
+
+        cursor.execute(
+            "DELETE FROM orders WHERE customer=%s AND category=%s AND item=%s AND size=%s AND quantity=%s AND total=%s LIMIT 1",
+            (values[0], values[1], values[2], values[3], values[4], values[5])
+        )
+        conn.commit()
+
         tree.delete(selected_item)
-        save_orders()
     
 
 # UPDATE
@@ -300,23 +319,33 @@ def update_order():
         messagebox.showwarning("Warning", "Select an order to update")
         return
 
-    # GET VALUES FIRST
+    old_values = tree.item(selected, "values")
+
     customer = customer_entry.get()
     category = category_combo.get()
     item = item_combo.get()
     size = size_combo.get()
 
-    # VALIDATION AFTER getting values
     if not all([customer, category, item, size]):
         messagebox.showwarning("Input Error", "Please complete all fields!")
         return
 
-    quantity = quantity_entry.get()
-    total = float(price_entry.get()) * int(quantity)
+    quantity = int(quantity_entry.get())
+    total = float(price_entry.get()) * quantity
 
-    tree.item(selected, values=(
-        customer, category, item, size, quantity, total
-    ))
+    cursor.execute(
+        """UPDATE orders
+           SET customer=%s, category=%s, item=%s, size=%s, quantity=%s, total=%s
+           WHERE customer=%s AND category=%s AND item=%s AND size=%s AND quantity=%s AND total=%s
+           LIMIT 1""",
+        (
+            customer, category, item, size, quantity, total,
+            old_values[0], old_values[1], old_values[2], old_values[3], old_values[4], old_values[5]
+        )
+    )
+    conn.commit()
+
+    tree.item(selected, values=(customer, category, item, size, quantity, total))
 
     messagebox.showinfo("Success", "Order updated successfully!")
     save_orders()
@@ -350,15 +379,11 @@ def save_orders():
 
 # LOAD FUNCTION
 def load_orders():
-    try:
-        with open("orders.dat", "rb") as file:
-            data = pickle.load(file)
+    cursor.execute("SELECT customer, category, item, size, quantity, total FROM orders")
+    rows = cursor.fetchall()
 
-            for row in data:
-                tree.insert("", "end", values=row)
-
-    except FileNotFoundError:
-        pass
+    for row in rows:
+        tree.insert("", "end", values=row)
 
 def load_selected(event):
     selected = tree.selection()
