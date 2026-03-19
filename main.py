@@ -433,6 +433,30 @@ def on_enter(e):
 def on_leave(e):
     e.widget['bg'] = "#A2663C"
 
+def generate_report(): #REPORT
+    with open("report.txt", "w") as file:
+        file.write("Beanorama Cafe Report\n")
+        file.write("========================\n\n")
+
+        total_sales = 0
+
+        for item in tree.get_children():
+            values = tree.item(item, "values")
+
+            file.write(
+                f"Customer: {values[0]}, "
+                f"Item: {values[2]}, "
+                f"Qty: {values[4]}, "
+                f"Total: {values[5]}\n"
+            )
+
+            total_sales += float(values[5])
+
+        file.write("\n========================\n")
+        file.write(f"TOTAL SALES: {total_sales}\n")
+
+    messagebox.showinfo("Report", "Report generated successfully!")
+
 
 # ============================================================
 # BUTTONS (USER ACTIONS)
@@ -446,7 +470,7 @@ bottom_frame.pack_propagate(False)
 button_frame = tk.Frame(bottom_frame, bg="#E6E2D7")
 button_frame.pack(pady=5)
 
-for i in range(5):
+for i in range(6):
     button_frame.columnconfigure(i, weight=1)
 
 btn_style = {
@@ -498,6 +522,14 @@ save_button = tk.Button(
     **btn_style
 )
 save_button.grid(row=0, column=4, padx=10, pady=5, sticky="ew")
+
+report_button = tk.Button(
+    button_frame,
+    text="Generate Report",
+    command=generate_report,
+    **btn_style
+)
+report_button.grid(row=0, column=5, padx=10, pady=5, sticky="ew")
 
 
 

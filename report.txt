@@ -1,0 +1,7 @@
+Beanorama Cafe Report
+========================
+
+Customer: Railey, Item: Americano, Qty: 2, Total: 140.0
+
+========================
+TOTAL SALES: 140.0
